@@ -7,16 +7,20 @@ import com.badlogic.ashley.core.Family.Builder;
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
 import com.badlogic.gdx.utils.Array;
 import com.spectralflux.lighthouse.component.MouseFollowComponent;
 import com.spectralflux.lighthouse.component.PlayerComponent;
@@ -27,6 +31,7 @@ import com.spectralflux.lighthouse.system.MovementSystem;
 
 public class GameScreen implements Screen, InputProcessor {
 	SpriteBatch batch;
+	SpriteBatch sidebarBatch;
 	Game game;
 	Engine engine;
 
@@ -40,6 +45,10 @@ public class GameScreen implements Screen, InputProcessor {
 
 	BitmapFont eldergodsit45Font;
 	BitmapFont eldergodsit60Font;
+
+	// lighthouse shot
+	int shotCountdownRemaining = 0;
+	private static final int SHOT_COUNTDOWN = 500;
 
 	public GameScreen(Game game) {
 		this.game = game;
@@ -84,6 +93,7 @@ public class GameScreen implements Screen, InputProcessor {
 	@Override
 	public void show() {
 		batch = new SpriteBatch();
+		sidebarBatch = new SpriteBatch();
 
 		// load textures up front
 		loadTextures();
@@ -113,27 +123,35 @@ public class GameScreen implements Screen, InputProcessor {
 			}
 		}
 
-		eldergodsit45Font.draw(batch, "Sanity Meter!", World.WINDOW_X - World.SIDEBAR_WIDTH + 10, 45);
-		eldergodsit60Font.draw(batch, "Innsmouth\nLighthouse\nKeeper", World.WINDOW_X - World.SIDEBAR_WIDTH + 2,
-				World.WINDOW_Y - 16);
-
 		for (Entity entity : engine.getEntitiesFor(family)) {
 			PositionComponent position = entity.getComponent(PositionComponent.class);
 			RenderComponent render = entity.getComponent(RenderComponent.class);
 			drawEntity(position, render);
 		}
-
+		
+		batch.end();
+		
+		// sidebar background
+		ShapeRenderer shapeRenderer = new ShapeRenderer();
+		shapeRenderer.begin(ShapeType.Filled);
+		shapeRenderer.setColor(new Color(0.1f, 0.1f, 0.1f, 1));
+		shapeRenderer.rect(World.GAME_AREA_X, 0, World.SIDEBAR_WIDTH, World.GAME_AREA_Y);
+		shapeRenderer.end();
+		
+		sidebarBatch.begin();
+		eldergodsit45Font.draw(sidebarBatch, "Sanity Meter!", World.WINDOW_X - World.SIDEBAR_WIDTH + 10, 45);
+		eldergodsit60Font.draw(sidebarBatch, "Innsmouth\nLighthouse\nKeeper", World.WINDOW_X - World.SIDEBAR_WIDTH + 2,
+				World.WINDOW_Y - 16);
+		
 		// player-specific rendering
-
 		fb = Family.all(PlayerComponent.class);
 		family = fb.get();
-
 		for (Entity entity : engine.getEntitiesFor(family)) {
 			PlayerComponent player = entity.getComponent(PlayerComponent.class);
 			drawSanityMeter(player.sanity);
 		}
-
-		batch.end();
+		
+		sidebarBatch.end();
 	}
 
 	private void drawEntity(PositionComponent position, RenderComponent render) {
@@ -147,24 +165,54 @@ public class GameScreen implements Screen, InputProcessor {
 	private void drawSanityMeter(int sanityRemaining) {
 		float lengthMultiplier = 1.8f;
 		float meterLength = World.TOTAL_SANITY * lengthMultiplier;
-		int meterHeight = 25; 
+		int meterHeight = 25;
 		int meterStartX = World.WINDOW_X - World.SIDEBAR_WIDTH + 15;
 		int meterStartY = 50;
-		
-		//background rectangle
-		batch.end();
+
+		// background rectangle
+		sidebarBatch.end();
 		ShapeRenderer shapeRenderer = new ShapeRenderer();
 		shapeRenderer.begin(ShapeType.Filled);
 		shapeRenderer.setColor(new Color(0.5f, 0, 0, 1));
 		shapeRenderer.rect(meterStartX, meterStartY, meterLength, meterHeight);
 		shapeRenderer.end();
-		
+
 		shapeRenderer = new ShapeRenderer();
 		shapeRenderer.begin(ShapeType.Filled);
 		shapeRenderer.setColor(new Color(0, 0.8f, 0.3f, 1));
-		shapeRenderer.rect(meterStartX, meterStartY, sanityRemaining*lengthMultiplier, meterHeight);
+		shapeRenderer.rect(meterStartX, meterStartY, sanityRemaining * lengthMultiplier, meterHeight);
 		shapeRenderer.end();
-		batch.begin();
+		sidebarBatch.begin();
+	}
+
+	@Override
+	public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+
+		if (button == Input.Buttons.LEFT) {
+			// shoot
+			shotCountdownRemaining = SHOT_COUNTDOWN;
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public boolean mouseMoved(int screenX, int screenY) {
+		boolean foundEntityToUpdate = false;
+
+		Builder fb = Family.all(PositionComponent.class, MouseFollowComponent.class);
+		Family family = fb.get();
+
+		for (Entity entity : engine.getEntitiesFor(family)) {
+			PositionComponent position = entity.getComponent(PositionComponent.class);
+
+			float angle = MathUtils.atan2(screenX - position.pos.x, screenY - position.pos.y);
+			angle = angle * (180 / MathUtils.PI);
+
+			position.rotation = angle;
+			foundEntityToUpdate = true;
+		}
+		return foundEntityToUpdate;
 	}
 
 	@Override
@@ -186,12 +234,6 @@ public class GameScreen implements Screen, InputProcessor {
 	}
 
 	@Override
-	public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
 	public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 		// TODO Auto-generated method stub
 		return false;
@@ -201,27 +243,6 @@ public class GameScreen implements Screen, InputProcessor {
 	public boolean touchDragged(int screenX, int screenY, int pointer) {
 		// TODO Auto-generated method stub
 		return false;
-	}
-
-	@Override
-	public boolean mouseMoved(int screenX, int screenY) {
-		boolean foundEntityToUpdate = false;
-
-		// System.err.println("(" + screenX + "," + screenY + ")");
-
-		Builder fb = Family.all(PositionComponent.class, MouseFollowComponent.class);
-		Family family = fb.get();
-
-		for (Entity entity : engine.getEntitiesFor(family)) {
-			PositionComponent position = entity.getComponent(PositionComponent.class);
-
-			float angle = MathUtils.atan2(screenX - position.pos.x, screenY - position.pos.y);
-			angle = angle * (180 / MathUtils.PI);
-
-			position.rotation = angle;
-			foundEntityToUpdate = true;
-		}
-		return foundEntityToUpdate;
 	}
 
 	@Override

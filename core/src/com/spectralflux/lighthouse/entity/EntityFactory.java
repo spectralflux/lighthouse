@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Vector2;
 import com.spectralflux.lighthouse.World;
+import com.spectralflux.lighthouse.component.HitboxComponent;
 import com.spectralflux.lighthouse.component.MouseFollowComponent;
 import com.spectralflux.lighthouse.component.PlayerComponent;
 import com.spectralflux.lighthouse.component.PositionComponent;
@@ -34,12 +35,19 @@ public class EntityFactory {
 		return entity;
 	}
 	
-	public Entity newSquidling(Texture tex) {
+	// enemy makers
+	
+	private Entity newEnemy(Texture tex) {
 		Entity entity = new Entity();
 		entity.add(new PositionComponent(new Vector2(0,0), 315.f));
 		entity.add(new RenderComponent(tex, new Color(1,1,1,0.5f)));
 		entity.add(new VelocityComponent(new Vector2(5, 5)));
+		entity.add(new HitboxComponent(16));
 		return entity;
+	}
+	
+	public Entity newSquidling(Texture tex) {
+		return newEnemy(tex);
 	}
 
 }
