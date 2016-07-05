@@ -31,6 +31,10 @@ public class RenderComponent implements Component {
 		return img;
 	}
 	
+	public void setColor(Color newColor) {
+		color = newColor;
+	}
+	
 	public Color color() {
 		return color;
 	}

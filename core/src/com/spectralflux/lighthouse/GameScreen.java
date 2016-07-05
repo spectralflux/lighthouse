@@ -22,6 +22,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
 import com.badlogic.gdx.utils.Array;
+import com.spectralflux.lighthouse.component.ClickFlashComponent;
 import com.spectralflux.lighthouse.component.MouseFollowComponent;
 import com.spectralflux.lighthouse.component.PlayerComponent;
 import com.spectralflux.lighthouse.component.PositionComponent;
@@ -47,8 +48,10 @@ public class GameScreen implements Screen, InputProcessor {
 	BitmapFont eldergodsit60Font;
 
 	// lighthouse shot
+	private static final int FLASH_LENGTH = 50;
+	private static final int SHOT_COUNTDOWN = 80;
 	int shotCountdownRemaining = 0;
-	private static final int SHOT_COUNTDOWN = 500;
+	int flashRemaining = 0;
 
 	public GameScreen(Game game) {
 		this.game = game;
@@ -126,23 +129,31 @@ public class GameScreen implements Screen, InputProcessor {
 		for (Entity entity : engine.getEntitiesFor(family)) {
 			PositionComponent position = entity.getComponent(PositionComponent.class);
 			RenderComponent render = entity.getComponent(RenderComponent.class);
+			ClickFlashComponent clickFlash = entity.getComponent(ClickFlashComponent.class);
+
+			if (clickFlash != null) {
+
+				render.setColor(new Color(1, 0.0f + (float) flashRemaining / FLASH_LENGTH, 0,
+						(float) shotCountdownRemaining / SHOT_COUNTDOWN));
+			}
+
 			drawEntity(position, render);
 		}
-		
+
 		batch.end();
-		
+
 		// sidebar background
 		ShapeRenderer shapeRenderer = new ShapeRenderer();
 		shapeRenderer.begin(ShapeType.Filled);
 		shapeRenderer.setColor(new Color(0.1f, 0.1f, 0.1f, 1));
 		shapeRenderer.rect(World.GAME_AREA_X, 0, World.SIDEBAR_WIDTH, World.GAME_AREA_Y);
 		shapeRenderer.end();
-		
+
 		sidebarBatch.begin();
 		eldergodsit45Font.draw(sidebarBatch, "Sanity Meter!", World.WINDOW_X - World.SIDEBAR_WIDTH + 10, 45);
 		eldergodsit60Font.draw(sidebarBatch, "Innsmouth\nLighthouse\nKeeper", World.WINDOW_X - World.SIDEBAR_WIDTH + 2,
 				World.WINDOW_Y - 16);
-		
+
 		// player-specific rendering
 		fb = Family.all(PlayerComponent.class);
 		family = fb.get();
@@ -150,8 +161,17 @@ public class GameScreen implements Screen, InputProcessor {
 			PlayerComponent player = entity.getComponent(PlayerComponent.class);
 			drawSanityMeter(player.sanity);
 		}
-		
+
 		sidebarBatch.end();
+
+		if (flashRemaining > 0) {
+			flashRemaining -= delta;
+		}
+
+		if (shotCountdownRemaining > 0) {
+			shotCountdownRemaining -= delta;
+		}
+
 	}
 
 	private void drawEntity(PositionComponent position, RenderComponent render) {
@@ -188,8 +208,9 @@ public class GameScreen implements Screen, InputProcessor {
 	@Override
 	public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 
-		if (button == Input.Buttons.LEFT) {
+		if (button == Input.Buttons.LEFT && shotCountdownRemaining <= 0) {
 			// shoot
+			flashRemaining = FLASH_LENGTH;
 			shotCountdownRemaining = SHOT_COUNTDOWN;
 			return true;
 		}
@@ -204,14 +225,25 @@ public class GameScreen implements Screen, InputProcessor {
 		Family family = fb.get();
 
 		for (Entity entity : engine.getEntitiesFor(family)) {
+			ClickFlashComponent clickFlash = entity.getComponent(ClickFlashComponent.class);
 			PositionComponent position = entity.getComponent(PositionComponent.class);
+			boolean updatePosition = true;
 
 			float angle = MathUtils.atan2(screenX - position.pos.x, screenY - position.pos.y);
 			angle = angle * (180 / MathUtils.PI);
 
-			position.rotation = angle;
+			// only update position for mouse followers that arent a recently
+			// fired lighthouse beam
+			if (clickFlash != null && shotCountdownRemaining > 0) {
+				updatePosition = false;
+			}
+
+			if (updatePosition) {
+				position.rotation = angle;
+			}
 			foundEntityToUpdate = true;
 		}
+
 		return foundEntityToUpdate;
 	}
 
