@@ -1,5 +1,7 @@
 package com.spectralflux.lighthouse;
 
+import java.util.List;
+
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
@@ -23,11 +25,14 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
 import com.badlogic.gdx.utils.Array;
 import com.spectralflux.lighthouse.component.ClickFlashComponent;
+import com.spectralflux.lighthouse.component.DamageComponent;
+import com.spectralflux.lighthouse.component.EnemyComponent;
 import com.spectralflux.lighthouse.component.MouseFollowComponent;
 import com.spectralflux.lighthouse.component.PlayerComponent;
 import com.spectralflux.lighthouse.component.PositionComponent;
 import com.spectralflux.lighthouse.component.RenderComponent;
 import com.spectralflux.lighthouse.entity.EntityFactory;
+import com.spectralflux.lighthouse.entity.Wave;
 import com.spectralflux.lighthouse.system.MovementSystem;
 
 public class GameScreen implements Screen, InputProcessor {
@@ -64,12 +69,17 @@ public class GameScreen implements Screen, InputProcessor {
 
 	private void loadInitialEntities() {
 		EntityFactory entityFactory = new EntityFactory();
+		Wave enemyWave = new Wave(squidlingTx);
+		List<Entity> initialWave = enemyWave.createWave(1);
 
 		engine.addEntity(entityFactory.newLighthouse(lighthouseTx));
 		engine.addEntity(entityFactory.newLighthouseBeam(lighthouseBeamTx));
 
 		// initial enemies
-		engine.addEntity(entityFactory.newSquidling(squidlingTx));
+		for (Entity entity: initialWave) {
+		    engine.addEntity(entity);
+		}
+		
 	}
 
 	private void loadSystems() {
@@ -132,7 +142,6 @@ public class GameScreen implements Screen, InputProcessor {
 			ClickFlashComponent clickFlash = entity.getComponent(ClickFlashComponent.class);
 
 			if (clickFlash != null) {
-
 				render.setColor(new Color(1, 0.0f + (float) flashRemaining / FLASH_LENGTH, 0,
 						(float) shotCountdownRemaining / SHOT_COUNTDOWN));
 			}
@@ -164,10 +173,10 @@ public class GameScreen implements Screen, InputProcessor {
 
 		sidebarBatch.end();
 
+		// count down last lighthouse firing flash.
 		if (flashRemaining > 0) {
 			flashRemaining -= delta;
 		}
-
 		if (shotCountdownRemaining > 0) {
 			shotCountdownRemaining -= delta;
 		}
@@ -209,6 +218,14 @@ public class GameScreen implements Screen, InputProcessor {
 	public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 
 		if (button == Input.Buttons.LEFT && shotCountdownRemaining <= 0) {
+		    Builder fb = Family.all(PositionComponent.class, EnemyComponent.class);
+	        Family family = fb.get();
+	        
+	        for (Entity entity : engine.getEntitiesFor(family)) {
+	            // TODO check collision with beam, if collide give entity a damage component
+	            PositionComponent position = entity.getComponent(PositionComponent.class);
+	            entity.add(new DamageComponent(World.LIGHTHOUSE_BEAM_DAMAGE));
+	        }
 			// shoot
 			flashRemaining = FLASH_LENGTH;
 			shotCountdownRemaining = SHOT_COUNTDOWN;
