@@ -14,7 +14,6 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -24,10 +23,7 @@ import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Polygon;
-import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
-import com.badlogic.gdx.utils.Array;
 import com.spectralflux.lighthouse.component.BeamComponent;
 import com.spectralflux.lighthouse.component.ClickFlashComponent;
 import com.spectralflux.lighthouse.component.DamageComponent;
@@ -54,13 +50,19 @@ public class GameScreen implements Screen, InputProcessor {
 	Texture lighthouseTx;
 	Texture squidlingTx;
 	Texture[] oceanSquaresTx;
+	Texture serpentTx;
+	Texture flyerTx;
 
 	int pointsTotal = 0;
+	int currentWave = 1;
 
 	// number of ocean textures to choose from
-	private static final int NUM_OCEAN_TEXTURES = 1;
+	private static final int NUM_OCEAN_TEXTURES = 3;
+
+	private int[][] oceanMap = new int[World.GAME_AREA_X / 32][World.GAME_AREA_Y / 32];
 
 	BitmapFont eldergodsit45Font;
+	BitmapFont eldergodsit45PurpleFont;
 	BitmapFont eldergodsit60Font;
 
 	// lighthouse shot
@@ -69,6 +71,9 @@ public class GameScreen implements Screen, InputProcessor {
 	int shotCountdownRemaining = 0;
 	int flashRemaining = 0;
 
+	// between wave countdown
+	int waveCountdown = 0;
+
 	public GameScreen(Game game) {
 		this.game = game;
 	}
@@ -76,21 +81,6 @@ public class GameScreen implements Screen, InputProcessor {
 	private void loadEngine() {
 		Gdx.app.setLogLevel(Application.LOG_DEBUG);
 		engine = new Engine();
-	}
-
-	private void loadInitialEntities() {
-		EntityFactory entityFactory = new EntityFactory();
-		Wave enemyWave = new Wave(squidlingTx);
-		List<Entity> initialWave = enemyWave.createWave(1);
-
-		engine.addEntity(entityFactory.newLighthouse(lighthouseTx));
-		engine.addEntity(entityFactory.newLighthouseBeam(lighthouseBeamTx));
-
-		// initial enemies
-		for (Entity entity : initialWave) {
-			engine.addEntity(entity);
-		}
-
 	}
 
 	private void loadSystems() {
@@ -104,17 +94,37 @@ public class GameScreen implements Screen, InputProcessor {
 
 		lighthouseTx = new Texture("lighthouse.png");
 		squidlingTx = new Texture("squidling.png");
+		serpentTx = new Texture("serpent.png");
+		flyerTx = new Texture("flyer.png");
 
-		oceanSquaresTx = new Texture[1];
-		for (int i = 1; i <= 1; i++) {
+		oceanSquaresTx = new Texture[NUM_OCEAN_TEXTURES];
+		for (int i = 1; i <= NUM_OCEAN_TEXTURES; i++) {
 			oceanSquaresTx[i - 1] = new Texture("ocean" + i + ".png");
+		}
+
+		for (int x = 0; x < World.GAME_AREA_X / 32; x++) {
+			for (int y = 0; y < World.GAME_AREA_Y / 32; y++) {
+				oceanMap[x][y] = MathUtils.random(NUM_OCEAN_TEXTURES - 1);
+			}
 		}
 
 		eldergodsit45Font = new BitmapFont(Gdx.files.internal("fonts/eldergodsit45.fnt"));
 		eldergodsit45Font.setColor(Color.WHITE);
 
+		eldergodsit45PurpleFont = new BitmapFont(Gdx.files.internal("fonts/eldergodsit45.fnt"));
+		eldergodsit45PurpleFont.setColor(Color.PURPLE);
+
 		eldergodsit60Font = new BitmapFont(Gdx.files.internal("fonts/eldergodsit60.fnt"));
 		eldergodsit60Font.setColor(Color.WHITE);
+	}
+
+	private void loadWave(int waveLevel) {
+		Wave enemyWave = new Wave(squidlingTx, serpentTx, flyerTx);
+		List<Entity> initialWave = enemyWave.createWave(waveLevel);
+
+		for (Entity entity : initialWave) {
+			engine.addEntity(entity);
+		}
 	}
 
 	@Override
@@ -127,7 +137,14 @@ public class GameScreen implements Screen, InputProcessor {
 
 		loadEngine();
 		loadSystems();
-		loadInitialEntities();
+
+		EntityFactory entityFactory = new EntityFactory();
+
+		engine.addEntity(entityFactory.newLighthouse(lighthouseTx));
+		engine.addEntity(entityFactory.newLighthouseBeam(lighthouseBeamTx));
+
+		// load first wave
+		loadWave(currentWave);
 
 		Gdx.input.setInputProcessor(this);
 	}
@@ -146,7 +163,8 @@ public class GameScreen implements Screen, InputProcessor {
 
 		for (int x = 0; x < World.GAME_AREA_X; x = x + 32) {
 			for (int y = 0; y < World.GAME_AREA_Y; y = y + 32) {
-				batch.draw(oceanSquaresTx[0], x, y);
+				// batch.draw(oceanSquaresTx[MathUtils.random(1)], x, y);
+				batch.draw(oceanSquaresTx[oceanMap[x / 32][y / 32]], x, y);
 			}
 		}
 
@@ -163,7 +181,36 @@ public class GameScreen implements Screen, InputProcessor {
 			drawEntity(position, render);
 		}
 
+		// if between waves, show the wave message
+		fb = Family.all(EnemyComponent.class);
+		family = fb.get();
+		boolean isEnemiesLeft = engine.getEntitiesFor(family).size() > 0;
+		if (!isEnemiesLeft && waveCountdown <= 0) {
+			waveCountdown = 200;
+		}
+		if (waveCountdown > 0) {
+			eldergodsit45Font.draw(batch, "Wave Clear!", 235, 500);
+			waveCountdown -= delta;
+
+			if (waveCountdown <= 0) {
+				// TODO increment current wave
+				loadWave(currentWave);
+			}
+		}
+
 		batch.end();
+
+		// if in the countdown between waves, dim the play area
+		if (waveCountdown > 0) {
+			Gdx.gl.glEnable(GL20.GL_BLEND);
+			Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+			ShapeRenderer shapeRenderer = new ShapeRenderer();
+			shapeRenderer.begin(ShapeType.Filled);
+			shapeRenderer.setColor(new Color(0, 0, 0, 0.3f));
+			shapeRenderer.rect(0, 0, World.GAME_AREA_X, World.GAME_AREA_Y);
+			shapeRenderer.end();
+			Gdx.gl.glDisable(GL20.GL_BLEND);
+		}
 
 		// sidebar background
 		ShapeRenderer shapeRenderer = new ShapeRenderer();
@@ -174,9 +221,13 @@ public class GameScreen implements Screen, InputProcessor {
 
 		sidebarBatch.begin();
 
-		eldergodsit45Font.draw(sidebarBatch, "Score", World.WINDOW_X - World.SIDEBAR_WIDTH + 10, 300);
-		eldergodsit45Font.draw(sidebarBatch, Integer.toString(pointsTotal), World.WINDOW_X - World.SIDEBAR_WIDTH + 10,
-				260);
+		eldergodsit45Font.draw(sidebarBatch, "Wave", World.WINDOW_X - World.SIDEBAR_WIDTH + 10, 350);
+		eldergodsit45PurpleFont.draw(sidebarBatch, Integer.toString(currentWave),
+				World.WINDOW_X - World.SIDEBAR_WIDTH + 10, 310);
+
+		eldergodsit45Font.draw(sidebarBatch, "Score", World.WINDOW_X - World.SIDEBAR_WIDTH + 10, 200);
+		eldergodsit45PurpleFont.draw(sidebarBatch, Integer.toString(pointsTotal),
+				World.WINDOW_X - World.SIDEBAR_WIDTH + 10, 160);
 
 		eldergodsit45Font.draw(sidebarBatch, "Sanity Meter!", World.WINDOW_X - World.SIDEBAR_WIDTH + 10, 45);
 		eldergodsit60Font.draw(sidebarBatch, "Innsmouth\nLighthouse\nKeeper", World.WINDOW_X - World.SIDEBAR_WIDTH + 2,
@@ -237,7 +288,7 @@ public class GameScreen implements Screen, InputProcessor {
 				PlayerComponent player = entity.getComponent(PlayerComponent.class);
 				if (player != null) {
 					// end the game, you've gone bananas!
-					game.setScreen(new PlayerDeathScreen(game));
+					game.setScreen(new PlayerDeathScreen(game, pointsTotal));
 					dispose();
 				}
 			}
@@ -261,7 +312,6 @@ public class GameScreen implements Screen, InputProcessor {
 		int meterStartX = World.WINDOW_X - World.SIDEBAR_WIDTH + 15;
 		int meterStartY = 50;
 
-		// background rectangle
 		sidebarBatch.end();
 		ShapeRenderer shapeRenderer = new ShapeRenderer();
 		shapeRenderer.begin(ShapeType.Filled);
@@ -285,21 +335,18 @@ public class GameScreen implements Screen, InputProcessor {
 			Family family = fb.get();
 			Entity beamEntity = engine.getEntitiesFor(family).first();
 			PositionComponent beamPosition = beamEntity.getComponent(PositionComponent.class);
-			float[] beamVertices = new float[12];
 
+			// build beam polygon for beam hitbox
+			float[] beamVertices = new float[12];
 			float angle = MathUtils.atan2(screenX - beamPosition.pos.x, screenY - beamPosition.pos.y);
 			float opposingAngle = angle + MathUtils.PI;
-
 			float arc = 0.05f;
-
 			beamVertices[0] = (float) World.GAME_AREA_X / 2 + (lighthouseBeamLength / 2 * MathUtils.cos(angle + arc));
 			beamVertices[1] = (float) World.GAME_AREA_Y / 2 + (lighthouseBeamLength / 2 * MathUtils.sin(angle + arc));
 			beamVertices[2] = (float) World.GAME_AREA_X / 2 + (lighthouseBeamLength / 2 * MathUtils.cos(angle - arc));
 			beamVertices[3] = (float) World.GAME_AREA_Y / 2 + (lighthouseBeamLength / 2 * MathUtils.sin(angle - arc));
-
 			beamVertices[4] = World.GAME_AREA_X / 2 + 3f;
 			beamVertices[5] = World.GAME_AREA_Y / 2 + 3f;
-
 			beamVertices[6] = (float) World.GAME_AREA_X / 2
 					+ (lighthouseBeamLength / 2 * MathUtils.cos(opposingAngle - arc));
 			beamVertices[7] = (float) World.GAME_AREA_Y / 2
@@ -309,7 +356,6 @@ public class GameScreen implements Screen, InputProcessor {
 					+ (lighthouseBeamLength / 2 * MathUtils.cos(opposingAngle + arc));
 			beamVertices[9] = (float) World.GAME_AREA_Y / 2
 					+ (lighthouseBeamLength / 2 * MathUtils.sin(opposingAngle + arc));
-
 			beamVertices[10] = World.GAME_AREA_X / 2 + -3f;
 			beamVertices[11] = World.GAME_AREA_Y / 2 + -3f;
 
@@ -327,9 +373,10 @@ public class GameScreen implements Screen, InputProcessor {
 					entity.add(new DamageComponent(World.LIGHTHOUSE_BEAM_DAMAGE));
 				}
 			}
-			// shoot animation
+			
 			flashRemaining = FLASH_LENGTH;
 			shotCountdownRemaining = SHOT_COUNTDOWN;
+			
 			return true;
 		}
 		return false;
@@ -383,71 +430,57 @@ public class GameScreen implements Screen, InputProcessor {
 
 		return foundEntityToUpdate;
 	}
+	
+	// overriden methods from InputProcessor and Screen that are unused.
 
 	@Override
 	public boolean keyDown(int keycode) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public boolean keyUp(int keycode) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public boolean keyTyped(char character) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public boolean touchDragged(int screenX, int screenY, int pointer) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public boolean scrolled(int amount) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public void resize(int width, int height) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void pause() {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void resume() {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void hide() {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void dispose() {
-		// TODO Auto-generated method stub
-
 	}
 
 }

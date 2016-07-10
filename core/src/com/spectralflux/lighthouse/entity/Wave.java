@@ -13,9 +13,13 @@ import com.spectralflux.lighthouse.World;
 public class Wave
 {
     private Texture squidlingTexture;
+    private Texture serpentTexture;
+    private Texture flyerTexture;
     
-    public Wave(Texture squidlingTexture) {
+    public Wave(Texture squidlingTexture, Texture serpentTexture, Texture flyerTexture) {
         this.squidlingTexture = squidlingTexture;
+        this.serpentTexture = serpentTexture;
+        this.flyerTexture = flyerTexture;
     }
     
     public List<Entity> createWave(int level) {
@@ -31,6 +35,13 @@ public class Wave
             waveEntities.add(entityFactory.newSquidling(squidlingTexture, 100, World.GAME_AREA_Y));
             waveEntities.add(entityFactory.newSquidling(squidlingTexture, 250, World.GAME_AREA_Y + 10));
             waveEntities.add(entityFactory.newSquidling(squidlingTexture, 400, World.GAME_AREA_Y + 20));
+            
+            waveEntities.add(entityFactory.newSerpent(serpentTexture, 400, 0));
+            waveEntities.add(entityFactory.newSquidling(serpentTexture, 25, 0));
+            waveEntities.add(entityFactory.newSquidling(serpentTexture, 400, World.GAME_AREA_Y + 20));
+            
+            waveEntities.add(entityFactory.newFlyer(flyerTexture, 400, World.GAME_AREA_Y + 20));
+            waveEntities.add(entityFactory.newFlyer(flyerTexture, 340, 0));
             break;
         default:
             break;

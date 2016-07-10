@@ -16,6 +16,10 @@ import com.spectralflux.lighthouse.component.PositionComponent;
 import com.spectralflux.lighthouse.component.RenderComponent;
 import com.spectralflux.lighthouse.component.VelocityComponent;
 
+/**
+ * Factory class for Ashley entities for use by the game.
+ *  
+ */
 public class EntityFactory {
 
 	public EntityFactory() {
@@ -48,7 +52,6 @@ public class EntityFactory {
 		Entity entity = new Entity();
 		entity.add(new PositionComponent(new Vector2(x, y), getEnemyInitialRotation(x, y)));
 		entity.add(new RenderComponent(tex, new Color(1, 1, 1, 0.5f)));
-		entity.add(new VelocityComponent(getEnemyInitialVelocity(x, y)));
 		entity.add(new HitboxComponent(tex.getWidth()/2));
 		
 		return entity;
@@ -57,10 +60,24 @@ public class EntityFactory {
 	public Entity newSquidling(Texture tex, int x, int y) {
 		Entity e = newEnemy(tex, x, y);
 		e.add(new EnemyComponent(1, 10, 20));
+		e.add(new VelocityComponent(getEnemyInitialVelocity(x, y, 10)));
 		return e;
 	}
 	
-	// TODO fill this in, not sure if working
+	public Entity newSerpent(Texture tex, int x, int y) {
+		Entity e = newEnemy(tex, x, y);
+		e.add(new EnemyComponent(1, 20, 15));
+		e.add(new VelocityComponent(getEnemyInitialVelocity(x, y, 20)));
+		return e;
+	}
+	
+	public Entity newFlyer(Texture tex, int x, int y) {
+		Entity e = newEnemy(tex, x, y);
+		e.add(new EnemyComponent(1, 50, 10));
+		e.add(new VelocityComponent(getEnemyInitialVelocity(x, y, 100)));
+		return e;
+	}
+	
 	private float getEnemyInitialRotation(int x, int y) {
 	    int centerX = World.GAME_AREA_X/2;
 	    int centerY = World.GAME_AREA_Y/2;
@@ -68,18 +85,17 @@ public class EntityFactory {
 	    float angle = MathUtils.atan2(centerX - x, centerY - y);
         angle = 360.0f - (angle * (180 / MathUtils.PI));
         
-	    //return 315.f;
         return angle;
 	}
 	
-	private Vector2 getEnemyInitialVelocity(int x, int y) {
+	private Vector2 getEnemyInitialVelocity(int x, int y, float speed) {
 		int centerX = World.GAME_AREA_X/2;
 	    int centerY = World.GAME_AREA_Y/2;
 	    
 	    float diffX = centerX - x;
 	    float diffY = centerY - y;
 	    
-	    Vector2 v = (new Vector2(diffX, diffY)).nor().scl(20f);
+	    Vector2 v = (new Vector2(diffX, diffY)).nor().scl(speed);
 	    
 		return v;
 	}

@@ -14,8 +14,10 @@ public class PlayerDeathScreen implements Screen {
 	SpriteBatch batch;
 	BitmapFont eldergodsit60Font;
 	BitmapFont eldergodsit45Font;
+	BitmapFont eldergodsit45PurpleFont;
+	int finalScore;
 
-	public PlayerDeathScreen(Game game) {
+	public PlayerDeathScreen(Game game, int finalScore) {
 		batch = new SpriteBatch();
 		
 		eldergodsit60Font = new BitmapFont(Gdx.files.internal("fonts/eldergodsit60.fnt"));
@@ -23,7 +25,12 @@ public class PlayerDeathScreen implements Screen {
 		
 		eldergodsit45Font = new BitmapFont(Gdx.files.internal("fonts/eldergodsit45.fnt"));
 		eldergodsit45Font.setColor(Color.WHITE);
+		
+		eldergodsit45PurpleFont = new BitmapFont(Gdx.files.internal("fonts/eldergodsit45.fnt"));
+		eldergodsit45PurpleFont.setColor(Color.PURPLE);
+		
 		this.game = game;
+		this.finalScore = finalScore;
 	}
 
 	@Override
@@ -40,6 +47,7 @@ public class PlayerDeathScreen implements Screen {
 		batch.begin();
 		eldergodsit60Font.draw(batch, "You have gone mad! Ia! Ia!", 170, 450);
 		eldergodsit45Font.draw(batch, "click to restart...", 300, 350);
+		eldergodsit45PurpleFont.draw(batch, "Score: " + Integer.toString(finalScore), 330, 200);
 		batch.end();
 
 		if (Gdx.input.isTouched()) {
@@ -50,32 +58,23 @@ public class PlayerDeathScreen implements Screen {
 
 	@Override
 	public void resize(int width, int height) {
-		// TODO Auto-generated method stub
 
 	}
 
 	@Override
 	public void pause() {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void resume() {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void hide() {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void dispose() {
-		// TODO Auto-generated method stub
-
 	}
 
 }

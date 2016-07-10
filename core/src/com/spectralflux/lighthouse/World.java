@@ -1,5 +1,9 @@
 package com.spectralflux.lighthouse;
 
+/**
+ * A collection of game constants. 
+ *
+ */
 public class World {
 	
 	public static final int GAME_AREA_X = 640;

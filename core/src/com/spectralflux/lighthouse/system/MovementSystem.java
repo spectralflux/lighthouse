@@ -7,6 +7,10 @@ import com.badlogic.ashley.systems.IteratingSystem;
 import com.spectralflux.lighthouse.component.PositionComponent;
 import com.spectralflux.lighthouse.component.VelocityComponent;
 
+/**
+ * System for moving entities with velocities.
+ *  
+ */
 public class MovementSystem extends IteratingSystem {
 
 	private ComponentMapper<PositionComponent> pm = ComponentMapper.getFor(PositionComponent.class);

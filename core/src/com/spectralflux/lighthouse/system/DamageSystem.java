@@ -9,6 +9,10 @@ import com.spectralflux.lighthouse.component.DeathComponent;
 import com.spectralflux.lighthouse.component.EnemyComponent;
 import com.spectralflux.lighthouse.component.PlayerComponent;
 
+/**
+ * System for calculating damage to entities that can receive it.
+ *  
+ */
 public class DamageSystem extends IteratingSystem {
 
     private ComponentMapper<DamageComponent> dm = ComponentMapper.getFor(DamageComponent.class);
