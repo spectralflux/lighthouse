@@ -38,6 +38,9 @@ public class DamageSystem extends IteratingSystem {
             }
         }
         
+        // damage is done, remove the component
+        entity.remove(DamageComponent.class);
+        
         if (hasDied) {
             entity.add(new DeathComponent());
         }

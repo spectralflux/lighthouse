@@ -28,6 +28,7 @@ public class EntityFactory {
 		entity.add(new PlayerComponent());
 		entity.add(new MouseFollowComponent());
 		entity.add(new RenderComponent(tex));
+		entity.add(new HitboxComponent(16));
 		return entity;
 	}
 
@@ -55,7 +56,7 @@ public class EntityFactory {
 
 	public Entity newSquidling(Texture tex, int x, int y) {
 		Entity e = newEnemy(tex, x, y);
-		e.add(new EnemyComponent(1));
+		e.add(new EnemyComponent(1, 10, 20));
 		return e;
 	}
 	
@@ -78,7 +79,7 @@ public class EntityFactory {
 	    float diffX = centerX - x;
 	    float diffY = centerY - y;
 	    
-	    Vector2 v = (new Vector2(diffX, diffY)).nor().scl(10f);
+	    Vector2 v = (new Vector2(diffX, diffY)).nor().scl(20f);
 	    
 		return v;
 	}

@@ -55,6 +55,8 @@ public class GameScreen implements Screen, InputProcessor {
 	Texture squidlingTx;
 	Texture[] oceanSquaresTx;
 
+	int pointsTotal = 0;
+
 	// number of ocean textures to choose from
 	private static final int NUM_OCEAN_TEXTURES = 1;
 
@@ -171,15 +173,40 @@ public class GameScreen implements Screen, InputProcessor {
 		shapeRenderer.end();
 
 		sidebarBatch.begin();
+
+		eldergodsit45Font.draw(sidebarBatch, "Score", World.WINDOW_X - World.SIDEBAR_WIDTH + 10, 300);
+		eldergodsit45Font.draw(sidebarBatch, Integer.toString(pointsTotal), World.WINDOW_X - World.SIDEBAR_WIDTH + 10,
+				260);
+
 		eldergodsit45Font.draw(sidebarBatch, "Sanity Meter!", World.WINDOW_X - World.SIDEBAR_WIDTH + 10, 45);
 		eldergodsit60Font.draw(sidebarBatch, "Innsmouth\nLighthouse\nKeeper", World.WINDOW_X - World.SIDEBAR_WIDTH + 2,
 				World.WINDOW_Y - 16);
 
-		// player-specific rendering
+		// player-specific rendering, and collision detection
 		fb = Family.all(PlayerComponent.class);
 		family = fb.get();
-		for (Entity entity : engine.getEntitiesFor(family)) {
-			PlayerComponent player = entity.getComponent(PlayerComponent.class);
+		for (Entity playerEntity : engine.getEntitiesFor(family)) {
+			PlayerComponent player = playerEntity.getComponent(PlayerComponent.class);
+			PositionComponent position = playerEntity.getComponent(PositionComponent.class);
+			HitboxComponent hitbox = playerEntity.getComponent(HitboxComponent.class);
+
+			Circle playerHitbox = new Circle(position.pos, hitbox.radius);
+
+			// check for collisions with player, deal out damage if hit and
+			// destroy enemy
+			Builder builder = Family.all(EnemyComponent.class, PositionComponent.class);
+			Family enemies = builder.get();
+			for (Entity enemy : engine.getEntitiesFor(enemies)) {
+				PositionComponent enemyPositionComponent = enemy.getComponent(PositionComponent.class);
+				HitboxComponent enemyHitboxComponent = enemy.getComponent(HitboxComponent.class);
+				Circle enemyHitbox = new Circle(enemyPositionComponent.pos, enemyHitboxComponent.radius);
+				if (Intersector.overlaps(playerHitbox, enemyHitbox)) {
+					EnemyComponent enemyComponent = enemy.getComponent(EnemyComponent.class);
+					enemy.add(new DeathComponent());
+					playerEntity.add(new DamageComponent(enemyComponent.dmg));
+				}
+			}
+
 			drawSanityMeter(player.sanity);
 		}
 
@@ -193,11 +220,26 @@ public class GameScreen implements Screen, InputProcessor {
 			shotCountdownRemaining -= delta;
 		}
 
-		// destroy all killed entities
+		// destroy all killed enemies, and check player death. you can't do this
+		// at time of damage because they are embedded in a collection and
+		// collections really don't like it when you remove elements while they
+		// are iterating through them!
 		fb = Family.all(DeathComponent.class);
 		family = fb.get();
 		for (Entity entity : engine.getEntitiesFor(family)) {
-			engine.removeEntity(entity);
+			EnemyComponent enemy = entity.getComponent(EnemyComponent.class);
+
+			// if enemy, give points to player
+			if (enemy != null) {
+				pointsTotal += enemy.points;
+				engine.removeEntity(entity);
+			} else {
+				PlayerComponent player = entity.getComponent(PlayerComponent.class);
+				if (player != null) {
+					// end the game, you've died!
+				}
+			}
+
 		}
 
 	}

@@ -13,7 +13,7 @@ public class PlayerComponent implements Component {
 	public List<PowerupComponent> powerups;
 	
 	public PlayerComponent() {
-		sanity = World.TOTAL_SANITY - 20; // TODO make this just total sanity, just testing something 
+		sanity = World.TOTAL_SANITY;
 		score = 0;
 		powerups = new ArrayList<>();
 	}
