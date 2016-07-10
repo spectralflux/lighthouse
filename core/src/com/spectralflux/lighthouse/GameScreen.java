@@ -236,7 +236,9 @@ public class GameScreen implements Screen, InputProcessor {
 			} else {
 				PlayerComponent player = entity.getComponent(PlayerComponent.class);
 				if (player != null) {
-					// end the game, you've died!
+					// end the game, you've gone bananas!
+					game.setScreen(new PlayerDeathScreen(game));
+					dispose();
 				}
 			}
 
