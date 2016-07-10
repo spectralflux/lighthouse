@@ -26,6 +26,8 @@ public class Wave
         case 1:
             waveEntities.add(entityFactory.newSquidling(squidlingTexture, 0, 0));
             waveEntities.add(entityFactory.newSquidling(squidlingTexture, World.GAME_AREA_X, 0));
+            waveEntities.add(entityFactory.newSquidling(squidlingTexture, 100, World.GAME_AREA_Y));
+            waveEntities.add(entityFactory.newSquidling(squidlingTexture, 250, World.GAME_AREA_Y + 10));
             break;
         default:
             break;

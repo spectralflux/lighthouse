@@ -6,7 +6,9 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.spectralflux.lighthouse.World;
+import com.spectralflux.lighthouse.component.BeamComponent;
 import com.spectralflux.lighthouse.component.ClickFlashComponent;
+import com.spectralflux.lighthouse.component.EnemyComponent;
 import com.spectralflux.lighthouse.component.HitboxComponent;
 import com.spectralflux.lighthouse.component.MouseFollowComponent;
 import com.spectralflux.lighthouse.component.PlayerComponent;
@@ -35,6 +37,7 @@ public class EntityFactory {
 		entity.add(new RenderComponent(tex, new Color(1, 1, 1, 0.5f)));
 		entity.add(new MouseFollowComponent());
 		entity.add(new ClickFlashComponent());
+		entity.add(new BeamComponent());
 		return entity;
 	}
 
@@ -44,13 +47,16 @@ public class EntityFactory {
 		Entity entity = new Entity();
 		entity.add(new PositionComponent(new Vector2(x, y), getEnemyInitialRotation(x, y)));
 		entity.add(new RenderComponent(tex, new Color(1, 1, 1, 0.5f)));
-		entity.add(new VelocityComponent(new Vector2(5, 5)));
+		entity.add(new VelocityComponent(getEnemyInitialVelocity(x, y)));
 		entity.add(new HitboxComponent(tex.getWidth()/2));
+		
 		return entity;
 	}
 
 	public Entity newSquidling(Texture tex, int x, int y) {
-		return newEnemy(tex, x, y);
+		Entity e = newEnemy(tex, x, y);
+		e.add(new EnemyComponent(1));
+		return e;
 	}
 	
 	// TODO fill this in, not sure if working
@@ -59,10 +65,22 @@ public class EntityFactory {
 	    int centerY = World.GAME_AREA_Y/2;
 	    
 	    float angle = MathUtils.atan2(centerX - x, centerY - y);
-        angle = angle * (180 / MathUtils.PI);
+        angle = 360.0f - (angle * (180 / MathUtils.PI));
         
 	    //return 315.f;
         return angle;
+	}
+	
+	private Vector2 getEnemyInitialVelocity(int x, int y) {
+		int centerX = World.GAME_AREA_X/2;
+	    int centerY = World.GAME_AREA_Y/2;
+	    
+	    float diffX = centerX - x;
+	    float diffY = centerY - y;
+	    
+	    Vector2 v = (new Vector2(diffX, diffY)).nor().scl(10f);
+	    
+		return v;
 	}
 
 }
