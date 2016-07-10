@@ -20,10 +20,12 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
+import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
 import com.badlogic.gdx.utils.Array;
 import com.spectralflux.lighthouse.component.BeamComponent;
@@ -31,6 +33,7 @@ import com.spectralflux.lighthouse.component.ClickFlashComponent;
 import com.spectralflux.lighthouse.component.DamageComponent;
 import com.spectralflux.lighthouse.component.DeathComponent;
 import com.spectralflux.lighthouse.component.EnemyComponent;
+import com.spectralflux.lighthouse.component.HitboxComponent;
 import com.spectralflux.lighthouse.component.MouseFollowComponent;
 import com.spectralflux.lighthouse.component.PlayerComponent;
 import com.spectralflux.lighthouse.component.PositionComponent;
@@ -47,7 +50,6 @@ public class GameScreen implements Screen, InputProcessor {
 	Engine engine;
 
 	Texture lighthouseBeamTx;
-	int lighthouseBeamWidth;
 	int lighthouseBeamLength;
 	Texture lighthouseTx;
 	Texture squidlingTx;
@@ -83,10 +85,10 @@ public class GameScreen implements Screen, InputProcessor {
 		engine.addEntity(entityFactory.newLighthouseBeam(lighthouseBeamTx));
 
 		// initial enemies
-		for (Entity entity: initialWave) {
-		    engine.addEntity(entity);
+		for (Entity entity : initialWave) {
+			engine.addEntity(entity);
 		}
-		
+
 	}
 
 	private void loadSystems() {
@@ -96,9 +98,8 @@ public class GameScreen implements Screen, InputProcessor {
 
 	private void loadTextures() {
 		lighthouseBeamTx = new Texture("lighthouse-beam.png");
-		lighthouseBeamWidth = lighthouseBeamTx.getHeight();
 		lighthouseBeamLength = lighthouseBeamTx.getWidth();
-		
+
 		lighthouseTx = new Texture("lighthouse.png");
 		squidlingTx = new Texture("squidling.png");
 
@@ -191,8 +192,8 @@ public class GameScreen implements Screen, InputProcessor {
 		if (shotCountdownRemaining > 0) {
 			shotCountdownRemaining -= delta;
 		}
-		
-		//destroy all killed entities
+
+		// destroy all killed entities
 		fb = Family.all(DeathComponent.class);
 		family = fb.get();
 		for (Entity entity : engine.getEntitiesFor(family)) {
@@ -237,68 +238,76 @@ public class GameScreen implements Screen, InputProcessor {
 
 		if (button == Input.Buttons.LEFT && shotCountdownRemaining <= 0) {
 			Builder fb = Family.all(BeamComponent.class, RenderComponent.class);
-	        Family family = fb.get();
-	        Entity beamEntity = engine.getEntitiesFor(family).first();
-	        RenderComponent beamRender = beamEntity.getComponent(RenderComponent.class);
-	        PositionComponent beamPosition = beamEntity.getComponent(PositionComponent.class);
-	        float[] beamVertices = new float[12];
-	        //lighthouseBeamWidth
-	        
-	        float angle = MathUtils.atan2(screenX - beamPosition.pos.x, screenY - beamPosition.pos.y);
-	        float opposingAngle = angle + MathUtils.PI;
-			
-	        float arc = 3f;
-	        
-	        beamVertices[0] = (float)(lighthouseBeamLength/2 * MathUtils.cos(angle+arc));
-	        beamVertices[1] = (float)(lighthouseBeamLength/2 * MathUtils.sin(angle+arc));
-	        beamVertices[2] = (float)(lighthouseBeamLength/2 * MathUtils.cos(angle-arc));
-	        beamVertices[3] = (float)(lighthouseBeamLength/2 * MathUtils.sin(angle-arc));
-	        
-	        beamVertices[4] = 3f;
-	        beamVertices[5] = 3f;
-	        
-	        beamVertices[6] = (float)(lighthouseBeamLength/2 * MathUtils.cos(opposingAngle-arc));
-	        beamVertices[7] = (float)(lighthouseBeamLength/2 * MathUtils.sin(opposingAngle-arc));
-	        
-	        beamVertices[8] = (float)(lighthouseBeamLength/2 * MathUtils.cos(opposingAngle+arc));
-	        beamVertices[9] = (float)(lighthouseBeamLength/2 * MathUtils.sin(opposingAngle+arc));
-	        beamVertices[10] = -3f;
-	        beamVertices[11] = -3f;
+			Family family = fb.get();
+			Entity beamEntity = engine.getEntitiesFor(family).first();
+			PositionComponent beamPosition = beamEntity.getComponent(PositionComponent.class);
+			float[] beamVertices = new float[12];
 
-	        
-	        
-	        
-	        
-	        
-	        //beamVertices[0] = beamPosition.pos.x - beamRender.originX();
-	        Polygon beamPolygon = new Polygon(beamVertices);
-	        
-	        
-		    fb = Family.all(PositionComponent.class, EnemyComponent.class);
-	        family = fb.get();
-	        
-	        for (Entity entity : engine.getEntitiesFor(family)) {
-	            // TODO check collision with beam, if collide give entity a damage component
-	            PositionComponent position = entity.getComponent(PositionComponent.class);
-	            Polygon entPoly = new Polygon(new float[]{position.pos.x+16f, position.pos.y+16f, position.pos.x-16f, position.pos.y+16f, position.pos.x-16f, position.pos.y-16f, position.pos.x+16f, position.pos.y-16f});
-	            boolean isCollision = Intersector.intersectPolygons(beamPolygon, entPoly, null);
-	            if (isCollision) {
-	            	System.err.println("hit!");
-	            	entity.add(new DamageComponent(World.LIGHTHOUSE_BEAM_DAMAGE));
-	            }
-	        }
-			// shoot
+			float angle = MathUtils.atan2(screenX - beamPosition.pos.x, screenY - beamPosition.pos.y);
+			float opposingAngle = angle + MathUtils.PI;
+
+			float arc = 0.05f;
+
+			beamVertices[0] = (float) World.GAME_AREA_X / 2 + (lighthouseBeamLength / 2 * MathUtils.cos(angle + arc));
+			beamVertices[1] = (float) World.GAME_AREA_Y / 2 + (lighthouseBeamLength / 2 * MathUtils.sin(angle + arc));
+			beamVertices[2] = (float) World.GAME_AREA_X / 2 + (lighthouseBeamLength / 2 * MathUtils.cos(angle - arc));
+			beamVertices[3] = (float) World.GAME_AREA_Y / 2 + (lighthouseBeamLength / 2 * MathUtils.sin(angle - arc));
+
+			beamVertices[4] = World.GAME_AREA_X / 2 + 3f;
+			beamVertices[5] = World.GAME_AREA_Y / 2 + 3f;
+
+			beamVertices[6] = (float) World.GAME_AREA_X / 2
+					+ (lighthouseBeamLength / 2 * MathUtils.cos(opposingAngle - arc));
+			beamVertices[7] = (float) World.GAME_AREA_Y / 2
+					+ (lighthouseBeamLength / 2 * MathUtils.sin(opposingAngle - arc));
+
+			beamVertices[8] = (float) World.GAME_AREA_X / 2
+					+ (lighthouseBeamLength / 2 * MathUtils.cos(opposingAngle + arc));
+			beamVertices[9] = (float) World.GAME_AREA_Y / 2
+					+ (lighthouseBeamLength / 2 * MathUtils.sin(opposingAngle + arc));
+
+			beamVertices[10] = World.GAME_AREA_X / 2 + -3f;
+			beamVertices[11] = World.GAME_AREA_Y / 2 + -3f;
+
+			Polygon beamPolygon = new Polygon(beamVertices);
+
+			fb = Family.all(PositionComponent.class, EnemyComponent.class);
+			family = fb.get();
+
+			for (Entity entity : engine.getEntitiesFor(family)) {
+				PositionComponent position = entity.getComponent(PositionComponent.class);
+				HitboxComponent hitbox = entity.getComponent(HitboxComponent.class);
+				Circle entBoundingCircle = new Circle(position.pos, hitbox.radius);
+				boolean isCollision = overlaps(beamPolygon, entBoundingCircle);
+				if (isCollision) {
+					entity.add(new DamageComponent(World.LIGHTHOUSE_BEAM_DAMAGE));
+				}
+			}
+			// shoot animation
 			flashRemaining = FLASH_LENGTH;
 			shotCountdownRemaining = SHOT_COUNTDOWN;
 			return true;
 		}
 		return false;
 	}
-	
-	public boolean isBeamCollision(Entity entity, Polygon beamPolygon) {
-		//make polygon for entity
-		
-		return false;
+
+	private boolean overlaps(Polygon polygon, Circle circle) {
+		float[] vertices = polygon.getTransformedVertices();
+		Vector2 center = new Vector2(circle.x, circle.y);
+		float squareRadius = circle.radius * circle.radius;
+		for (int i = 0; i < vertices.length; i += 2) {
+			if (i == 0) {
+				if (Intersector.intersectSegmentCircle(
+						new Vector2(vertices[vertices.length - 2], vertices[vertices.length - 1]),
+						new Vector2(vertices[i], vertices[i + 1]), center, squareRadius))
+					return true;
+			} else {
+				if (Intersector.intersectSegmentCircle(new Vector2(vertices[i - 2], vertices[i - 1]),
+						new Vector2(vertices[i], vertices[i + 1]), center, squareRadius))
+					return true;
+			}
+		}
+		return polygon.contains(circle.x, circle.y);
 	}
 
 	@Override
