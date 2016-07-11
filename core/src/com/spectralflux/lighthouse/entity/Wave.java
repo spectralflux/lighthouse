@@ -43,6 +43,15 @@ public class Wave
             waveEntities.add(entityFactory.newFlyer(flyerTexture, 400, World.GAME_AREA_Y + 20));
             waveEntities.add(entityFactory.newFlyer(flyerTexture, 340, 0));
             break;
+        case 2:
+            
+            for (int i = 0; i < 6; i++) {
+              waveEntities.add(entityFactory.newFlyer(flyerTexture,i*100,-i*100));
+            }
+            for (int i = 0; i < 6; i++) {
+              waveEntities.add(entityFactory.newFlyer(flyerTexture,600 - i*100,World.GAME_AREA_Y + i*100));
+            }
+            break;
         default:
             break;
         }
