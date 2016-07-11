@@ -53,6 +53,7 @@ public class Wave
             }
             break;
         default:
+        	waveEntities.add(entityFactory.newFlyer(flyerTexture, 340, 0));
             break;
         }
         

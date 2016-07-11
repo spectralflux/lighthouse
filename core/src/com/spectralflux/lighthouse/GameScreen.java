@@ -193,7 +193,7 @@ public class GameScreen implements Screen, InputProcessor {
 			waveCountdown -= delta;
 
 			if (waveCountdown <= 0) {
-				// TODO increment current wave
+				currentWave += 1;
 				loadWave(currentWave);
 			}
 		}
@@ -373,10 +373,10 @@ public class GameScreen implements Screen, InputProcessor {
 					entity.add(new DamageComponent(World.LIGHTHOUSE_BEAM_DAMAGE));
 				}
 			}
-			
+
 			flashRemaining = FLASH_LENGTH;
 			shotCountdownRemaining = SHOT_COUNTDOWN;
-			
+
 			return true;
 		}
 		return false;
@@ -411,26 +411,15 @@ public class GameScreen implements Screen, InputProcessor {
 		for (Entity entity : engine.getEntitiesFor(family)) {
 			ClickFlashComponent clickFlash = entity.getComponent(ClickFlashComponent.class);
 			PositionComponent position = entity.getComponent(PositionComponent.class);
-			boolean updatePosition = true;
-
 			float angle = MathUtils.atan2(screenX - position.pos.x, screenY - position.pos.y);
 			angle = angle * (180 / MathUtils.PI);
-
-			// only update position for mouse followers that arent a recently
-			// fired lighthouse beam
-			if (clickFlash != null && shotCountdownRemaining > 0) {
-				updatePosition = false;
-			}
-
-			if (updatePosition) {
-				position.rotation = angle;
-			}
+			position.rotation = angle;
 			foundEntityToUpdate = true;
 		}
 
 		return foundEntityToUpdate;
 	}
-	
+
 	// overriden methods from InputProcessor and Screen that are unused.
 
 	@Override
